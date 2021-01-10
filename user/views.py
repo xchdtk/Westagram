@@ -5,10 +5,10 @@ import bcrypt
 import json
 
 from django.views import View 
-from django.http import JsonResponse
+from django.http  import JsonResponse
 
-from .models import Users, Follow
-from user.utils import login_decorator
+from .models            import Users, Follow
+from user.utils         import login_decorator
 from westagram.settings import SECRET
 
 # Create your views here.
@@ -22,22 +22,20 @@ class SignUp(View):
             email        = data["email"]
             password     = data["password"]
 
-           
             if not email:
                 return JsonResponse({"message" :"이메일를 입력해주세요"}, status = 400)
 
             if len(password) < LEN_PASSWORD:
                 return JsonResponse({"message" :"비밀번호를 8자리 이상 입력해주세요."}, status = 400)
     
-            if email:
-                email_compile = re.compile("\w+\@[a-zA-Z]+\.[a-zA-Z]+")
-                email_check   = email_compile.match(email)   
+            email_compile = re.compile("\w+\@[a-zA-Z]+\.[a-zA-Z]+")
+            email_check   = email_compile.match(email)   
 
-                if not email_check:
-                    return JsonResponse({'MESSAGE': 'INVALID_EMAIL'}, status=400)
+            if not email_check:
+                return JsonResponse({'MESSAGE': 'INVALID_EMAIL'}, status=400)
 
-                if Users.objects.filter(email = email).exists():
-                    return JsonResponse({"message" :"이미 회원가입 되어있습니다."}, status = 400)
+            if Users.objects.filter(email = email).exists():
+                return JsonResponse({"message" :"이미 회원가입 되어있습니다."}, status = 400)
                 
             password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
             Users.objects.create(phone_number = phone_number,
@@ -83,27 +81,31 @@ class Signin(View):
         except Users.DoesNotExist:
             return JsonResponse({"message": "이메일이 틀렸습니다."}, status = 400) 
 
+
 class FollowView(View):
     @login_decorator
     def post(self, request, follower_id):
   
-        user     = request.user
-
-        follower = Users.objects.get(id = follower_id)
-        followee = Users.objects.get(id = user)
+        try:
+            user     = request.user
         
-        if followee.id == follower_id:
-            return JsonResponse({"message" : "자신의 계정을 follow 할 수 없습니다."}, status=400)
-
-        if Follow.objects.filter(follower = follower, followee = followee).exists():
-            Follow.objects.filter(follower = follower, followee = followee).delete()
-            return JsonResponse({"message" : "UNFOLLOWED"}, status=400)
-
-        follow = Follow(
-            follower = follower,
-            followee = followee
-        )
-        follow.save()
-        return JsonResponse({"message" : "FOLLOWED"}, status=201)
+            follower = Users.objects.get(id = follower_id)
+            followee = Users.objects.get(id = user)
         
-            
+            if followee.id == follower_id:
+                return JsonResponse({"message" : "자신의 계정을 follow 할 수 없습니다."}, status=400)
+
+            if Follow.objects.filter(follower = follower, followee = followee).exists():
+                Follow.objects.filter(follower = follower, followee = followee).delete()
+                return JsonResponse({"message" : "UNFOLLOWED"}, status=400)
+
+            follow = Follow(
+                follower = follower,
+                followee = followee
+            )
+
+            follow.save()
+            return JsonResponse({"message" : "FOLLOWED"}, status=201)
+        
+        except Users.DoesNotExist:
+            return JsonResponse({"message" : "해당 계정이 없습니다."}, status=400)
