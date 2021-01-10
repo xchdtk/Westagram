@@ -2,10 +2,11 @@ import json
 import jwt
 
 from django.views import View 
-from django.http import JsonResponse
+from django.http  import JsonResponse
 
 from westagram.settings import SECRET
-from user.utils import login_decorator
+from user.utils         import login_decorator
+from django.http        import HttpResponse
 
 from .models import Users
 from .models import (Love,
@@ -13,6 +14,8 @@ from .models import (Love,
                      Post_register, 
                      Comments_register,  
                      CommentsInComments)
+                        
+
 
 class Post(View):
     def get(self, request):
@@ -31,8 +34,9 @@ class Post(View):
                     }
                 )
             return JsonResponse({'message' : post_list}, status=200)
+
         except KeyError:
-            return JsonResponse({'MESSAGE :':"KEY_ERROR"},status = 400)
+            return JsonResponse({'MESSAGE :':"KEY_ERROR"}, status = 400)
 
             
     @login_decorator
@@ -46,39 +50,42 @@ class Post(View):
             title     = data['title']
             image_url = data['image_url']
             Post_register.objects.create(user = user, content = content, title = title, image_url = image_url)
+
         except KeyError :
-            return JsonResponse({'MESSAGE :':"KEY_ERROR"},status = 400)
+            return JsonResponse({'MESSAGE :':"KEY_ERROR"}, status = 400)
             
         return JsonResponse({'message' : 'SUCCESS'}, status=201)
 
 
 
 class Comment(View):
-    def get(self, request):
+    def get(self, request, post_id):
         try:
-            all_comment = Comments_register.objects.all()
+            post        = Post_register.objects.get(id = post_id)
+            all_comment = Comments_register.objects.filter(post_register = post)
 
-            if not all_comment.count():
+            if not all_comment:
                 return JsonResponse({'message' : '댓글이 없습니다'}, status=400)
 
             comment_list = []
             for comment in all_comment:
-                comment_dic = {
+                comment_list.append( {
                     'id'          : comment.id,
-                    'comment'     : comment.comment,
-                    'user'        : comment.user.user_name,
+                    'user'        : comment.user.id,
                     'post'        : comment.post_register.id,
+                    'comment'     : comment.comment,
                     'create_time' : comment.create_time,
                     'update_time' : comment.update_time
-                }
-                comment_list.append(comment_dic)
+                })
+                
             return JsonResponse({'message' : comment_list}, status=200)
 
         except KeyError:
             return JsonResponse({'MESSAGE :':"KEY_ERROR"},status = 400)
      
+        except Post_register.DoesNotExist:
+            return JsonResponse({'message' : "해당 게시물이 없습니다"})
         
-            
 
     @login_decorator
     def post(self, request, post_id):
@@ -108,6 +115,9 @@ class Love_Function(View):
             user     = request.user
             post     = Post_register.objects.get(id=post_id)
 
+            if Love.objects.filter(user = user, post_register = post).exists():
+                return JsonResponse({"message" : "해당 게시물을 이미 좋아요 했습니다."}, status=400)
+                
             user_love = Love(
                 user          = user,
                 post_register = post
@@ -185,23 +195,25 @@ class UpdateView(View):
 
 class CommentsInCommentsView(View):
     @login_decorator
-    def post(self, request, post_id, comment_id):
+    def post(self, *args, **kwargs):
         try:
             data         = json.loads(request.body)
-
             user         = request.user
             content      = data["content"]
             post         = Post_register.objects.get(id = post_id) 
             comment      = Comments_register.objects.get(id = comment_id)
             post_comment = Comments_register.objects.filter(id = comment_id).select_related("post_register")
-            print(comment)
-
             CommentsInComments.objects.create(user = user, comment = post_comment[0], content = content)
 
             return JsonResponse({"message" : "SUCCESS"}, status=200)
+
         except Post_register.DoesNotExist:
             return JsonResponse({"message" : "해당 게시물이 없습니다."}, status=400)
 
         except Comments_register.DoesNotExist:
             return JsonResponse({"message" : "해당 댓글이 없습니다."}, status=400)
+
+        
+
+
         

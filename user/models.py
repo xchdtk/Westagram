@@ -12,9 +12,14 @@ class Users(models.Model):
         db_table = 'users'
 
 
+
+
+
 class Follow(models.Model):
-    folFolower = models.reignKey('Users', on_delete = models.CASCADE, related_name= 'follower')
-    followee = models.ForeignKey('Users', on_delete = models.CASCADE, related_name= 'floowee')
+    folFolower = models.ForeignKey('Users', on_delete = models.CASCADE, related_name= 'follower')
+    followee   = models.ForeignKey('Users', on_delete = models.CASCADE, related_name= 'floowee')
 
     class Meta:
         db_table = 'follow'
+
+

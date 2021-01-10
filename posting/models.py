@@ -1,6 +1,6 @@
-from django.db import models
+from django.db   import models
 from user.models import Users
-
+  
 
 # Create your models here.
 # 게시물 등록
@@ -54,3 +54,8 @@ class CommentsInComments(models.Model):
 
     class Meta:
         db_table  = "commentsincomments"
+
+
+
+
+
